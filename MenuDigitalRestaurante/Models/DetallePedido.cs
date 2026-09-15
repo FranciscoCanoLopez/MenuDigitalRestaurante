@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MenuRestaurante.Models
+namespace MenuDigitalRestaurante.Models
 {
     public class DetallePedido
     {
