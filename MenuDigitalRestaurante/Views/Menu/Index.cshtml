@@ -1,0 +1,89 @@
+@model IEnumerable<MenuDigitalRestaurante.Models.Categoria>
+
+@{
+    ViewData["Title"] = "Menú Digital";
+    int numeroMesa = ViewBag.NumeroMesa ?? 0;
+    int mesaId = ViewBag.MesaId ?? 0;
+}
+
+<div class="container py-3" style="max-width: 600px;">
+    <!-- Encabezado con número de mesa -->
+    <div class="card bg-primary text-white text-center mb-4 shadow-sm">
+        <div class="card-body py-3">
+            <h4 class="m-0">🍽️ Menú Digital</h4>
+            <span class="badge bg-light text-dark fs-6 mt-1">Mesa @numeroMesa</span>
+        </div>
+    </div>
+
+    <!-- Formulario para enviar el pedido -->
+    <form action="/Pedido/Crear" method="post" id="formPedido">
+        <input type="hidden" name="mesaId" value="@mesaId" />
+        <input type="hidden" name="numeroMesa" value="@numeroMesa" />
+
+        <!-- Listado de Categorías y Platillos -->
+        @foreach (var categoria in Model)
+        {
+            if (categoria.Platillos.Any())
+            {
+                <h5 class="text-secondary border-bottom pb-2 mt-4">@categoria.Nombre</h5>
+                
+                @foreach (var platillo in categoria.Platillos)
+                {
+                    <div class="card mb-3 shadow-sm border-0 bg-light">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="fw-bold mb-1">@platillo.Nombre</h6>
+                                    <p class="text-muted small mb-2">@platillo.Descripcion</p>
+                                    <span class="fw-bold text-success">$@platillo.Precio.ToString("0.00")</span>
+                                </div>
+                                <!-- Selector de Cantidad -->
+                                <div style="width: 100px;">
+                                    <input type="number" 
+                                           name="cantidades[@platillo.Id]" 
+                                           class="form-control text-center input-cantidad" 
+                                           min="0" 
+                                           max="10" 
+                                           value="0" />
+                                </div>
+                            </div>
+
+                            <!-- Campo para notas u observaciones especiales -->
+                            <div class="mt-2">
+                                <input type="text" 
+                                       name="notas[@platillo.Id]" 
+                                       class="form-control form-control-sm" 
+                                       placeholder="Ej: Sin cebolla, extra salsa..." />
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        }
+
+        <!-- Sección de Pago y Confirmación -->
+        <div class="card border-primary mt-4 mb-5 shadow">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">Método de Pago</h5>
+                <p class="text-muted small">Selecciona cómo pagarás en caja al finalizar tu consumo:</p>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="metodoPago" id="pagoEfectivo" value="Efectivo" checked>
+                    <label class="form-check-label" for="pagoEfectivo">
+                        💵 Efectivo en caja
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="metodoPago" id="pagoTarjeta" value="Tarjeta">
+                    <label class="form-check-label" for="pagoTarjeta">
+                        💳 Tarjeta de Crédito / Débito
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold">
+                    🚀 Enviar Pedido a Cocina
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
