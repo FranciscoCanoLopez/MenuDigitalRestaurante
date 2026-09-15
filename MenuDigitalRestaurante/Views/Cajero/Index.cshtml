@@ -1,0 +1,99 @@
+@model IEnumerable<MenuDigitalRestaurante.Models.Pedido>
+
+@{
+    ViewData["Title"] = "Panel de Caja";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🖥️ Panel de Control - Caja</h2>
+        <a href="/Cajero" class="btn btn-outline-primary btn-sm">🔄 Actualizar Pedidos</a>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <h4 class="text-muted">No hay pedidos pendientes en este momento. ✨</h4>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var pedido in Model)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow-sm border-0 h-100">
+                        <!-- Cabecera de la tarjeta con mesa y estado -->
+                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                            <h5 class="m-0 fw-bold">
+                                @(pedido.Mesa != null ? $"Mesa {pedido.Mesa.NumeroMesa}" : "Para Llevar / Domicilio")
+                            </h5>
+                            <span class="badge bg-warning text-dark">@pedido.EstadoPedido</span>
+                        </div>
+
+                        <div class="card-body">
+                            <p class="text-muted small mb-2">
+                                <strong>Folio:</strong> #@pedido.Id | 
+                                <strong>Hora:</strong> @pedido.FechaPedido.ToLocalTime().ToString("HH:mm")
+                            </p>
+                            
+                            <!-- Detalle de consumo -->
+                            <ul class="list-group list-group-flush mb-3">
+                                @foreach (var detalle in pedido.Detalles)
+                                {
+                                    <li class="list-group-content border-0 px-0 py-1">
+                                        <div class="d-flex justify-content-between">
+                                            <span><strong>@detalle.Cantidad x</strong> @(detalle.Platillo?.Nombre ?? "Producto")</span>
+                                            <span class="text-muted">$@((detalle.PrecioUnitario * detalle.Cantidad).ToString("0.00"))</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(detalle.NotasEspeciales))
+                                        {
+                                            <small class="text-danger d-block ms-3">⚠️ @detalle.NotasEspeciales</small>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+
+                            <hr />
+
+                            <!-- Total y Método de Pago -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <small class="text-muted d-block">Método de Pago:</small>
+                                    <span class="badge bg-secondary">
+                                        @(pedido.MetodoPago == "Efectivo" ? "💵 Efectivo" : "💳 Tarjeta")
+                                    </span>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted d-block">Total a Cobrar:</small>
+                                    <h4 class="fw-bold text-success m-0">$@pedido.Total.ToString("0.00")</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Acciones del Cajero -->
+                        <div class="card-footer bg-light border-0 d-flex gap-2">
+                            <a href="/Cajero/Ticket/@pedido.Id" target="_blank" class="btn btn-outline-secondary w-50">
+                                📄 Ticket
+                            </a>
+                            <form action="/Cajero/Cobrar" method="post" class="w-50">
+                                <input type="hidden" name="pedidoId" value="@pedido.Id" />
+                                <button type="submit" class="btn btn-success w-100 fw-bold">
+                                    ✅ Cobrar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
