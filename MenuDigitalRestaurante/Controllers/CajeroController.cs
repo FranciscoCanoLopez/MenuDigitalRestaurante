@@ -30,33 +30,24 @@ namespace MenuDigitalRestaurante.Controllers
 
         // Acción para procesar el pago y liberar la mesa
         [HttpPost]
-        public async Task<IActionResult> Cobrar(int pedidoId)
+        public async Task<IActionResult> Cobrar(int pedidoId, string metodoPago)
         {
             var pedido = await _context.Pedidos.FindAsync(pedidoId);
-            if (pedido == null)
-            {
-                return NotFound();
-            }
+                if (pedido == null) return NotFound();
 
-            // 1. Cambiar estado del pedido a 'Pagado'
-            pedido.EstadoPedido = "Pagado";
+                pedido.EstadoPedido = "Pagado";
+                pedido.MetodoPago = string.IsNullOrEmpty(metodoPago) ? "Efectivo" : metodoPago;
 
-            // 2. Liberar la mesa en SesionesMesas si el pedido pertenece a una mesa
-            if (pedido.MesaId.HasValue)
-            {
                 var sesionActiva = await _context.SesionesMesas
-                    .FirstOrDefaultAsync(s => s.MesaId == pedido.MesaId.Value && s.PedidoActivo == true);
+                    .FirstOrDefaultAsync(s => s.MesaId == pedido.MesaId && s.PedidoActivo);
 
                 if (sesionActiva != null)
                 {
-                    sesionActiva.PedidoActivo = false; // Se libera la mesa para nuevos escaneos
+                    sesionActiva.PedidoActivo = false; 
                 }
-            }
 
-            await _context.SaveChangesAsync();
-
-            TempData["Mensaje"] = $"Pedido #{pedidoId} cobrado con éxito. La mesa ha sido liberada.";
-            return RedirectToAction(nameof(Index));
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
         }
 
         // Vista de Ticket Digital para impresión o lectura rápida

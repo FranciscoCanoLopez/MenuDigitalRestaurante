@@ -1,0 +1,56 @@
+@model MenuDigitalRestaurante.Models.Pedido
+@{
+    Layout = null; // Quitamos el menú de navegación para que parezca un ticket real
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Ticket #@Model.Id</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; padding: 20px; color: #000; }
+        .text-center { text-align: center; }
+        .divisor { border-bottom: 1px dashed #000; margin: 10px 0; }
+        .item-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+        .total-row { font-size: 18px; font-weight: bold; margin-top: 10px; }
+        .btn-imprimir { display: block; width: 100%; padding: 10px; margin-top: 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        @@media print { .btn-imprimir { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="text-center">
+        <h2>LA PESCADERÍA</h2>
+        <p>Ticket de Consumo</p>
+        <p>Fecha: @Model.FechaPedido.ToString("dd/MM/yyyy HH:mm")</p>
+        <p>Pedido #: @Model.Id</p>
+    </div>
+
+    <div class="divisor"></div>
+
+    @if (Model.Detalles != null)
+    {
+        foreach (DetallePedido detalle in Model.Detalles)
+        {
+            <div class="item-row">
+                <span>@detalle.Cantidad x @detalle.Platillo!.Nombre</span>
+                <span>$@((detalle.Cantidad * detalle.PrecioUnitario).ToString("0.00"))</span>
+            </div>
+        }
+    }
+
+    <div class="divisor"></div>
+
+    <div class="item-row total-row">
+        <span>TOTAL:</span>
+        <span>$@Model.Total.ToString("0.00")</span>
+    </div>
+    
+    <div class="text-center" style="margin-top: 15px;">
+        <p>Método de Pago: @Model.MetodoPago</p>
+        <p>¡Gracias por su preferencia!</p>
+    </div>
+
+    <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Ticket</button>
+</body>
+</html>
