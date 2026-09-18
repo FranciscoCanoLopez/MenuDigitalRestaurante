@@ -9,6 +9,8 @@ namespace MenuDigitalRestaurante.Models
         public string Nombre { get; set; } = null!;
         // NUEVO: Para borrado lógico
         public bool Activo { get; set; } = true;
+
+        public int Orden { get; set; } = 0;
         public virtual ICollection<Platillo> Platillos { get; set; } = new List<Platillo>();
     }
 }

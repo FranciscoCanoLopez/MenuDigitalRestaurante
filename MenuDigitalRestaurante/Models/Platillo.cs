@@ -13,7 +13,7 @@ namespace MenuDigitalRestaurante.Models
         public bool Disponible { get; set; } // Sirve para indicar "Agotado hoy"
         public bool Activo { get; set; } = true; // NUEVO: Sirve para Borrado Lógico (Descontinuado)
         public string? ImagenUrl { get; set; }
-
+        public ICollection<VariantePlatillo> Variantes { get; set; } = new List<VariantePlatillo>();
         public virtual Categoria? Categoria { get; set; }
     }
 }

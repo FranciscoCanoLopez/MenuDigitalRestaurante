@@ -21,11 +21,12 @@ namespace MenuDigitalRestaurante.Controllers
         {
             var platillos = await _context.Platillos
                 .Include(p => p.Categoria)
-                .Where(p => p.Activo == true) // Solo trae los que no han sido borrados
-                .OrderBy(p => p.CategoriaId)
+                .Include(p => p.Variantes.Where(v => v.Activo == true)) // Incluir variantes activas
+                .Where(p => p.Activo == true)
+                .OrderBy(p => p.Categoria.Orden) // Ordenar por la nueva columna Orden de la categoría
                 .ToListAsync();
 
-            ViewBag.Categorias = await _context.Categorias.ToListAsync();
+            ViewBag.Categorias = await _context.Categorias.Where(c => c.Activo).OrderBy(c => c.Orden).ToListAsync();
             return View(platillos);
         }
 
@@ -72,6 +73,28 @@ namespace MenuDigitalRestaurante.Controllers
                 platillo.Activo = false; 
                 await _context.SaveChangesAsync();
                 TempData["Exito"] = "Platillo eliminado (descontinuado) correctamente del menú.";
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        // --- GESTIÓN DE VARIANTES DE PLATILLOS ---
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarVariante(int platilloId, string nombreVariante, decimal precio)
+        {
+            if (platilloId > 0 && !string.IsNullOrWhiteSpace(nombreVariante))
+            {
+                var variante = new VariantePlatillo
+                {
+                    PlatilloId = platilloId,
+                    NombreVariante = nombreVariante,
+                    Precio = precio,
+                    Activo = true
+                };
+                
+                _context.VariantesPlatillos.Add(variante);
+                await _context.SaveChangesAsync();
+                TempData["Exito"] = "Variante agregada correctamente.";
             }
             return RedirectToAction(nameof(Index));
         }

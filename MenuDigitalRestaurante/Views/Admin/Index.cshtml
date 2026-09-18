@@ -41,7 +41,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.03);
         }
 
-        .table hover tbody tr:hover {
+        .table-hover tbody tr:hover {
             background-color: var(--celeste-suave);
         }
 
@@ -75,6 +75,24 @@
         </div>
     </nav>
 
+    <!-- Alertas de Éxito o Error -->
+    <div class="container-fluid px-4">
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Exito"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> @TempData["Exito"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    </div>
+
     <div class="container-fluid px-4">
         <div class="card card-custom p-4">
             <h5 class="fw-bold mb-3" style="color: var(--celeste-oscuro);">Platillos del Menú</h5>
@@ -96,7 +114,21 @@
                         {
                             <tr>
                                 <td><span class="badge bg-light text-dark border">@p.Categoria?.Nombre</span></td>
-                                <td class="fw-bold">@p.Nombre</td>
+                                <td class="fw-bold">
+                                    @p.Nombre
+                                    <!-- Mostrar Variantes si el platillo las tiene -->
+                                    @if (p.Variantes != null && p.Variantes.Any())
+                                    {
+                                        <div class="mt-1 d-flex flex-wrap gap-1">
+                                            @foreach (var v in p.Variantes)
+                                            {
+                                                <span class="badge bg-light text-dark border">
+                                                    @v.NombreVariante ($@v.Precio.ToString("0.00"))
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </td>
                                 <td class="text-muted small" style="max-width: 250px;">@p.Descripcion</td>
                                 <td class="fw-bold text-info">$@p.Precio.ToString("0.00")</td>
                                 <td>
@@ -108,15 +140,26 @@
                                     </form>
                                 </td>
                                 <td class="text-end">
+                                    <!-- Botón Nueva Variante -->
+                                    <button class="btn btn-sm btn-outline-info me-1" 
+                                            onclick="abrirModalVariante(@p.Id, '@p.Nombre')" 
+                                            data-bs-toggle="modal" data-bs-target="#modalVariante"
+                                            title="Agregar Variante">
+                                        <i class="bi bi-plus-square-dotted"></i>
+                                    </button>
+
+                                    <!-- Botón Editar Platillo -->
                                     <button class="btn btn-sm btn-outline-primary me-1" 
                                             onclick="editarPlatillo(@p.Id, '@p.Nombre', '@p.Descripcion', @p.Precio, @p.CategoriaId, '@p.Disponible.ToString().ToLower()')" 
-                                            data-bs-toggle="modal" data-bs-target="#modalPlatillo">
+                                            data-bs-toggle="modal" data-bs-target="#modalPlatillo"
+                                            title="Editar Platillo">
                                         <i class="bi bi-pencil"></i>
                                     </button>
 
+                                    <!-- Botón Eliminar Platillo -->
                                     <form action="/Admin/EliminarPlatillo" method="post" class="d-inline" onsubmit="return confirm('¿Deseas eliminar este platillo?');">
                                         <input type="hidden" name="id" value="@p.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -165,8 +208,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Precio ($)</label>
+                            <label class="form-label">Precio Base ($)</label>
                             <input type="number" step="0.01" id="precio" name="Precio" class="form-control" required />
+                            <small class="text-muted">Si el platillo tiene variantes, este será el precio "Desde".</small>
                         </div>
 
                         <div class="form-check mb-3">
@@ -177,6 +221,39 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-celeste">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar Variante -->
+    <div class="modal fade" id="modalVariante" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <form action="/Admin/GuardarVariante" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Agregar Variante</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="varPlatilloId" name="platilloId" />
+                        
+                        <p class="small text-muted mb-3">Platillo: <strong id="varPlatilloNombre"></strong></p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre de Presentación</label>
+                            <input type="text" name="nombreVariante" class="form-control" placeholder="Ej. Sencillo, 1 Litro" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Precio ($)</label>
+                            <input type="number" step="0.01" name="precio" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-info text-white">Guardar Variante</button>
                     </div>
                 </form>
             </div>
@@ -202,6 +279,11 @@
             document.getElementById('precio').value = precio;
             document.getElementById('categoriaId').value = categoriaId;
             document.getElementById('disponible').checked = (disponible === 'true');
+        }
+
+        function abrirModalVariante(platilloId, platilloNombre) {
+            document.getElementById('varPlatilloId').value = platilloId;
+            document.getElementById('varPlatilloNombre').innerText = platilloNombre;
         }
     </script>
 </body>

@@ -16,6 +16,7 @@ namespace MenuDigitalRestaurante.Data
         public DbSet<SesionMesa> SesionesMesas { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallePedido> DetallePedidos { get; set; }
+        public DbSet<VariantePlatillo> VariantesPlatillos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +28,7 @@ namespace MenuDigitalRestaurante.Data
                 entity.Property(e => e.Id).HasColumnName("id");
                 entity.Property(e => e.Nombre).HasColumnName("nombre");
                 entity.Property(e => e.Activo).HasColumnName("activo");
+                entity.Property(e => e.Orden).HasColumnName("orden");
             });
 
             modelBuilder.Entity<Platillo>(entity => {
@@ -75,6 +77,15 @@ namespace MenuDigitalRestaurante.Data
                 entity.Property(e => e.Cantidad).HasColumnName("cantidad");
                 entity.Property(e => e.PrecioUnitario).HasColumnName("preciounitario");
                 entity.Property(e => e.NotasEspeciales).HasColumnName("notasespeciales");
+            });
+
+            modelBuilder.Entity<VariantePlatillo>(entity => {
+                entity.ToTable("variantesplatillos");
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.PlatilloId).HasColumnName("platilloid");
+                entity.Property(e => e.NombreVariante).HasColumnName("nombrevariante");
+                entity.Property(e => e.Precio).HasColumnName("precio");
+                entity.Property(e => e.Activo).HasColumnName("activo");
             });
         }
     }

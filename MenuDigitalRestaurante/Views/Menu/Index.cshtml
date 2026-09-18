@@ -201,21 +201,77 @@
                             {
                                 <div class="col-12 col-sm-6 col-lg-4">
                                     <div class="card-platillo">
-                                        <div>
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <h6 class="fw-bold m-0 text-dark">@platillo.Nombre</h6>
-                                                <span class="precio-tag">$@platillo.Precio.ToString("0.00")</span>
+                                        @if (platillo.Variantes != null && platillo.Variantes.Any())
+                                        {
+                                            <!-- DISEÑO PARA PLATILLOS CON VARIANTES -->
+                                            <div>
+                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                    <h6 class="fw-bold m-0 text-dark">@platillo.Nombre</h6>
+                                                    <span class="precio-tag" style="font-size: 0.95rem;">Desde $@platillo.Variantes.Min(v => v.Precio).ToString("0.00")</span>
+                                                </div>
+                                                <p class="text-muted small mb-2" style="font-size: 0.82rem; line-height: 1.3;">
+                                                    @platillo.Descripcion
+                                                </p>
                                             </div>
-                                            <p class="text-muted small mb-2" style="font-size: 0.82rem; line-height: 1.3;">
-                                                @platillo.Descripcion
-                                            </p>
-                                        </div>
 
-                                        <div class="d-flex justify-content-end align-items-center mt-2 pt-2 border-top">
-                                            <button class="btn btn-pedir">
-                                                <i class="bi bi-plus-lg me-1"></i> Agregar
-                                            </button>
-                                        </div>
+                                            <div class="d-flex justify-content-end align-items-center mt-2 pt-2 border-top">
+                                                <button class="btn btn-pedir" data-bs-toggle="modal" data-bs-target="#modalVar-@platillo.Id">
+                                                    Elegir Opciones
+                                                </button>
+                                            </div>
+
+                                            <!-- Modal de Selección de Variante -->
+                                            <div class="modal fade" id="modalVar-@platillo.Id" tabindex="-1">
+                                                <div class="modal-dialog modal-dialog-centered modal-sm">
+                                                    <div class="modal-content border-0 shadow">
+                                                        <div class="modal-header bg-light border-0">
+                                                            <h6 class="modal-title fw-bold text-dark">@platillo.Nombre</h6>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body p-3">
+                                                            <p class="small text-muted mb-3">Selecciona una presentación:</p>
+                                                            
+                                                            <div class="d-flex flex-column gap-2">
+                                                                @foreach (var variante in platillo.Variantes)
+                                                                {
+                                                                    <label class="border rounded p-3 d-flex align-items-center" style="cursor: pointer;">
+                                                                        <input class="form-check-input m-0 me-3" type="radio" name="variante_@platillo.Id" value="@variante.Id" required>
+                                                                        <div class="d-flex justify-content-between w-100">
+                                                                            <span class="fw-medium text-dark">@variante.NombreVariante</span>
+                                                                            <span class="fw-bold" style="color: var(--celeste-principal);">$@variante.Precio.ToString("0.00")</span>
+                                                                        </div>
+                                                                    </label>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer border-0 pt-0">
+                                                            <button type="button" class="btn btn-pedir w-100 py-2 fs-6" onclick="agregarVarianteAlCarrito(@platillo.Id, '@platillo.Nombre.Replace("'", "\\'")')">
+                                                                Agregar al Pedido
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <!-- DISEÑO NORMAL (SIN VARIANTES) -->
+                                            <div>
+                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                    <h6 class="fw-bold m-0 text-dark">@platillo.Nombre</h6>
+                                                    <span class="precio-tag">$@platillo.Precio.ToString("0.00")</span>
+                                                </div>
+                                                <p class="text-muted small mb-2" style="font-size: 0.82rem; line-height: 1.3;">
+                                                    @platillo.Descripcion
+                                                </p>
+                                            </div>
+
+                                            <div class="d-flex justify-content-end align-items-center mt-2 pt-2 border-top">
+                                                <button class="btn btn-pedir" onclick="agregarAlCarrito(@platillo.Id, '@platillo.Nombre.Replace("'", "\\'")', @platillo.Precio, null, '')">
+                                                    <i class="bi bi-plus-lg me-1"></i> Agregar
+                                                </button>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             }
@@ -227,6 +283,204 @@
         </div>
     </div>
 
+    <!-- Botón Flotante del Carrito -->
+    <div id="floating-cart" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 d-none" style="z-index: 1040; width: 90%; max-width: 400px;">
+        <button class="btn btn-pedir w-100 shadow-lg d-flex justify-content-between align-items-center py-3 fs-6 rounded-pill" data-bs-toggle="offcanvas" data-bs-target="#panelCarrito">
+            <span class="badge bg-white text-dark rounded-pill" id="cart-count">0</span>
+            <span class="fw-bold">Ver mi pedido</span>
+            <span class="fw-bold" id="cart-total-float">$0.00</span>
+        </button>
+    </div>
+
+    <!-- Panel del Carrito (Offcanvas) -->
+    <div class="offcanvas offcanvas-bottom rounded-top-4" tabindex="-1" id="panelCarrito" style="height: 85vh; max-height: 85vh;">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title fw-bold text-dark">🍽️ Mi Pedido</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <!-- Lista de Platillos -->
+            <div class="flex-grow-1 overflow-auto p-3" id="cart-items-container">
+                <!-- Los items se inyectarán aquí con JS -->
+            </div>
+
+            <!-- Resumen y Pago -->
+            <div class="border-top p-3 bg-light">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fw-bold text-dark fs-5">Total a pagar:</span>
+                    <span class="fw-bold fs-5 text-primary" id="cart-total-panel">$0.00</span>
+                </div>
+
+                <p class="small text-muted mb-2">Método de pago:</p>
+                <div class="d-flex gap-2 mb-3">
+                    <input type="radio" class="btn-check" name="metodoPago" id="pagoEfectivo" value="Efectivo" checked>
+                    <label class="btn btn-outline-secondary w-50" for="pagoEfectivo"><i class="bi bi-cash me-1"></i> Efectivo</label>
+
+                    <input type="radio" class="btn-check" name="metodoPago" id="pagoTarjeta" value="Tarjeta">
+                    <label class="btn btn-outline-secondary w-50" for="pagoTarjeta"><i class="bi bi-credit-card me-1"></i> Tarjeta</label>
+                </div>
+
+                <button class="btn btn-pedir w-100 py-3 fs-5 rounded-3" onclick="confirmarOrden()">
+                    Ordenar Ahora
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let carrito = [];
+
+        function agregarAlCarrito(platilloId, nombre, precio, varianteId, varianteNombre) {
+            let itemExistente = carrito.find(item => item.platilloId === platilloId && item.varianteId === varianteId);
+
+            if (itemExistente) {
+                itemExistente.cantidad += 1;
+            } else {
+                carrito.push({
+                    platilloId: platilloId,
+                    nombre: nombre,
+                    precio: parseFloat(precio),
+                    varianteId: varianteId,
+                    varianteNombre: varianteNombre,
+                    cantidad: 1
+                });
+            }
+            actualizarUI();
+        }
+
+        function agregarVarianteAlCarrito(platilloId, platilloNombre) {
+            let radioSeleccionado = document.querySelector(`input[name="variante_${platilloId}"]:checked`);
+            
+            if (!radioSeleccionado) {
+                alert("Por favor, selecciona una presentación antes de agregar al pedido.");
+                return;
+            }
+
+            let varianteId = radioSeleccionado.value;
+            let contenedorLabel = radioSeleccionado.closest('label');
+            let varianteNombre = contenedorLabel.querySelector('span.text-dark').innerText;
+            let precioTexto = contenedorLabel.querySelector('span.fw-bold').innerText.replace('$', '');
+            
+            agregarAlCarrito(platilloId, platilloNombre, precioTexto, varianteId, varianteNombre);
+            
+            let modalEl = document.getElementById(`modalVar-${platilloId}`);
+            let modalInstance = bootstrap.Modal.getInstance(modalEl);
+            modalInstance.hide();
+        }
+
+        function modificarCantidad(index, cambio) {
+            carrito[index].cantidad += cambio;
+            if (carrito[index].cantidad <= 0) {
+                carrito.splice(index, 1);
+            }
+            actualizarUI();
+        }
+
+        function actualizarUI() {
+            let container = document.getElementById('cart-items-container');
+            let total = 0;
+            let cantidadTotal = 0;
+            
+            container.innerHTML = '';
+
+            carrito.forEach((item, index) => {
+                let subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                cantidadTotal += item.cantidad;
+
+                let descVariante = item.varianteNombre ? `<small class="text-muted d-block">${item.varianteNombre}</small>` : '';
+
+                container.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div style="flex: 1;">
+                            <h6 class="m-0 fw-bold text-dark">${item.nombre}</h6>
+                            ${descVariante}
+                            <span class="text-primary fw-bold">$${item.precio.toFixed(2)}</span>
+                        </div>
+                        
+                        <div class="d-flex align-items-center border rounded-pill bg-white px-2">
+                            <button class="btn btn-sm btn-link text-dark text-decoration-none px-2" onclick="modificarCantidad(${index}, -1)">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                            <span class="fw-bold px-2">${item.cantidad}</span>
+                            <button class="btn btn-sm btn-link text-dark text-decoration-none px-2" onclick="modificarCantidad(${index}, 1)">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            let totalFormateado = `$${total.toFixed(2)}`;
+            document.getElementById('cart-total-float').innerText = totalFormateado;
+            document.getElementById('cart-total-panel').innerText = totalFormateado;
+            document.getElementById('cart-count').innerText = cantidadTotal;
+
+            let floatingCart = document.getElementById('floating-cart');
+            if (carrito.length > 0) {
+                floatingCart.classList.remove('d-none');
+            } else {
+                floatingCart.classList.add('d-none');
+                let offcanvasEl = document.getElementById('panelCarrito');
+                let offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if(offcanvasInstance) offcanvasInstance.hide();
+            }
+        }
+
+        function confirmarOrden() {
+            if (carrito.length === 0) return;
+
+            let metodo = document.querySelector('input[name="metodoPago"]:checked').value;
+            let totalActual = document.getElementById('cart-total-panel').innerText;
+            
+            let confirmacion = confirm(`¿Desea continuar? Revise su orden antes de continuar.\n\nMétodo de pago: ${metodo}\nTotal: ${totalActual}\n\nSi está seguro presione "Aceptar" para Ordenar.`);
+            
+            if (confirmacion) {
+                // 1. Preparar el paquete de datos (JSON)
+                let ordenData = {
+                    Mesa: parseInt('@ViewBag.MesaId') || 1, // Toma la mesa del ViewBag
+                    MetodoPago: metodo,
+                    Detalles: carrito.map(item => ({
+                        PlatilloId: item.platilloId,
+                        VarianteId: item.varianteId ? parseInt(item.varianteId) : null,
+                        VarianteNombre: item.varianteNombre || "",
+                        Cantidad: item.cantidad,
+                        PrecioUnitario: item.precio
+                    }))
+                };
+
+                // 2. Enviar los datos al controlador usando fetch()
+                fetch('/Menu/CrearPedido', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ordenData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert("¡Orden enviada a cocina exitosamente! En breve la llevaremos a tu mesa.");
+                        
+                        // Vaciar carrito y cerrar panel
+                        carrito = [];
+                        actualizarUI();
+                        
+                        let offcanvasEl = document.getElementById('panelCarrito');
+                        let offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                        if(offcanvasInstance) offcanvasInstance.hide();
+                    } else {
+                        alert("Hubo un problema: " + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error en la petición:", error);
+                    alert("Error de red. Verifica tu conexión e intenta de nuevo.");
+                });
+            }
+        }
+    </script>
 </body>
 </html>
