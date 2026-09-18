@@ -38,9 +38,9 @@ namespace MenuRestaurante.Controllers
             // 3. Si la mesa está libre, consultamos el menú completo
             // Incluimos las categorías y solo los platillos que estén disponibles
             var categoriasConPlatillos = await _context.Categorias
-                .Include(c => c.Platillos.Where(p => p.Disponible))
-                .ToListAsync();
-
+            .Include(c => c.Platillos.Where(p => p.Disponible == true && p.Activo == true))
+            .ToListAsync();
+            
             // 4. Mandamos datos importantes a la Vista usando ViewBag
             ViewBag.NumeroMesa = mesaDb.NumeroMesa;
             ViewBag.MesaId = mesaDb.Id;

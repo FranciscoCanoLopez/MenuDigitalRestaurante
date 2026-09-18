@@ -10,7 +10,8 @@ namespace MenuDigitalRestaurante.Models
         public string Nombre { get; set; } = null!;
         public string? Descripcion { get; set; }
         public decimal Precio { get; set; }
-        public bool Disponible { get; set; } = true;
+        public bool Disponible { get; set; } // Sirve para indicar "Agotado hoy"
+        public bool Activo { get; set; } = true; // NUEVO: Sirve para Borrado Lógico (Descontinuado)
         public string? ImagenUrl { get; set; }
 
         public virtual Categoria? Categoria { get; set; }

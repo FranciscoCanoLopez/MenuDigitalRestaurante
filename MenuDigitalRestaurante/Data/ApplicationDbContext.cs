@@ -26,6 +26,7 @@ namespace MenuDigitalRestaurante.Data
                 entity.ToTable("categorias");
                 entity.Property(e => e.Id).HasColumnName("id");
                 entity.Property(e => e.Nombre).HasColumnName("nombre");
+                entity.Property(e => e.Activo).HasColumnName("activo");
             });
 
             modelBuilder.Entity<Platillo>(entity => {
@@ -37,6 +38,7 @@ namespace MenuDigitalRestaurante.Data
                 entity.Property(e => e.Precio).HasColumnName("precio");
                 entity.Property(e => e.Disponible).HasColumnName("disponible");
                 entity.Property(e => e.ImagenUrl).HasColumnName("imagenurl");
+                entity.Property(e => e.Activo).HasColumnName("activo");
             });
 
             modelBuilder.Entity<Mesa>(entity => {
