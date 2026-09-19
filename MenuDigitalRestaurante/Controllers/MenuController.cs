@@ -22,52 +22,121 @@ namespace MenuRestaurante.Controllers
             var mesaDb = await _context.Mesas.FirstOrDefaultAsync(m => m.NumeroMesa == mesa);
             if (mesaDb == null)
             {
-                // Si alguien inventa un número de mesa, le mostramos un error
                 return Content("Error: La mesa indicada no existe. Por favor escanea el código QR nuevamente.");
             }
 
-            // 2. Verificar si la mesa ya tiene un pedido activo (bloqueo)
-            var sesionActiva = await _context.SesionesMesas
-                .FirstOrDefaultAsync(s => s.MesaId == mesaDb.Id && s.PedidoActivo == true);
+            // --- SEGURIDAD POR COOKIES (TOKEN DE DISPOSITIVO) ---
+            string? tokenCelular = Request.Cookies["TokenRestaurante"];
+            SesionMesa? sesionDispositivo = null!;
 
-            if (sesionActiva != null)
+            if (!string.IsNullOrEmpty(tokenCelular))
             {
-                // Si ya pidió, lo redirigimos a una pantalla de espera
-                return RedirectToAction("PedidoEnProceso", new { mesa = mesaDb.NumeroMesa });
+                sesionDispositivo = await _context.SesionesMesas.FirstOrDefaultAsync(s => s.TokenSesion == tokenCelular);
             }
 
-            // 3. Si la mesa está libre, consultamos el menú completo
-            // Incluimos las categorías y solo los platillos que estén disponibles
-            var categoriasConPlatillos = await _context.Categorias
-            .Where(c => c.Activo == true)
-            .OrderBy(c => c.Orden) // <-- ORDENA POR EL CAMPO ORDEN
-            .Include(c => c.Platillos.Where(p => p.Disponible == true && p.Activo == true))
-                .ThenInclude(p => p.Variantes.Where(v => v.Activo == true))
-            .ToListAsync();
+            // REGLA 1: Si este celular ya hizo un pedido, bloquearlo en su pantalla de proceso (Evita que navegue a otras mesas)
+            if (sesionDispositivo != null && sesionDispositivo.PedidoActivo)
+            {
+                var mesaAsignada = await _context.Mesas.FindAsync(sesionDispositivo.MesaId);
+                return RedirectToAction("PedidoEnProceso", new { mesa = mesaAsignada!.NumeroMesa });
+            }
 
-            // 4. Mandamos datos importantes a la Vista usando ViewBag
+            // REGLA 2: Verificar si la mesa que intenta abrir está ocupada por OTRO celular
+            var sesionMesaOcupada = await _context.SesionesMesas
+                .FirstOrDefaultAsync(s => s.MesaId == mesaDb.Id && s.PedidoActivo == true);
+
+            if (sesionMesaOcupada != null)
+            {
+                // Si la mesa tiene pedido activo, y el token de la mesa NO es el de este celular -> Acceso Denegado
+                if (sesionDispositivo == null || sesionDispositivo.TokenSesion != sesionMesaOcupada.TokenSesion)
+                {
+                    return Content("❌ ACCESO DENEGADO: Esta mesa ya está ocupada por otro dispositivo y tiene un pedido en curso. Si es un error, contacte a un mesero.");
+                }
+            }
+
+            // REGLA 3: Generar un Token Nuevo si es un cliente nuevo (o si su sesión anterior ya se cobró)
+            if (sesionDispositivo == null || sesionDispositivo.MesaId != mesaDb.Id)
+            {
+                string nuevoToken = Guid.NewGuid().ToString();
+
+                // Limpiamos la base de datos borrando sesiones viejas inactivas de esta mesa
+                var sesionesViejas = _context.SesionesMesas.Where(s => s.MesaId == mesaDb.Id && s.PedidoActivo == false);
+                _context.SesionesMesas.RemoveRange(sesionesViejas);
+
+                var nuevaSesion = new SesionMesa
+                {
+                    MesaId = mesaDb.Id,
+                    TokenSesion = nuevoToken,
+                    FechaCreacion = DateTime.UtcNow,
+                    PedidoActivo = false
+                };
+                
+                _context.SesionesMesas.Add(nuevaSesion);
+                await _context.SaveChangesAsync();
+
+                // Guardar la Cookie en el celular (Expira en 4 horas automáticamente)
+                Response.Cookies.Append("TokenRestaurante", nuevoToken, new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddHours(4),
+                    HttpOnly = true,
+                    IsEssential = true
+                });
+            }
+            // ---------------------------------------------------
+
+            // Si pasó todas las validaciones, cargamos el menú normal
+            var categoriasConPlatillos = await _context.Categorias
+                .Where(c => c.Activo == true)
+                .OrderBy(c => c.Orden)
+                .Include(c => c.Platillos.Where(p => p.Disponible == true && p.Activo == true))
+                    .ThenInclude(p => p.Variantes.Where(v => v.Activo == true))
+                .ToListAsync();
+
             ViewBag.NumeroMesa = mesaDb.NumeroMesa;
             ViewBag.MesaId = mesaDb.Id;
 
-            // Retornamos la vista (el HTML) pasándole la lista de categorías
             return View(categoriasConPlatillos);
         }
 
-        // Esta es la pantalla que se muestra cuando intentan entrar pero ya pidieron
-        public IActionResult PedidoEnProceso(int mesa)
+        // Pantalla de bloqueo seguro
+        public async Task<IActionResult> PedidoEnProceso(int mesa)
         {
-            ViewBag.NumeroMesa = mesa;
+            // Validar que realmente tenga permiso de estar en esta pantalla
+            string? tokenCelular = Request.Cookies["TokenRestaurante"];
+            if (string.IsNullOrEmpty(tokenCelular)) return RedirectToAction("Index", new { mesa = mesa });
+
+            var sesionDispositivo = await _context.SesionesMesas.FirstOrDefaultAsync(s => s.TokenSesion == tokenCelular);
+            if (sesionDispositivo == null || !sesionDispositivo.PedidoActivo) 
+            {
+                return RedirectToAction("Index", new { mesa = mesa });
+            }
+
+            // Tomamos la mesa real de la base de datos (por si el usuario alteró el número en la URL)
+            var mesaReal = await _context.Mesas.FindAsync(sesionDispositivo.MesaId);
+            ViewBag.NumeroMesa = mesaReal!.NumeroMesa;
+
             return View();
         }
 
         // --- NUEVA LÓGICA DEL CARRITO ---
-[HttpPost]
+        [HttpPost]
         public async Task<IActionResult> CrearPedido([FromBody] PedidoRequest request)
         {
             if (request == null || request.Detalles == null || !request.Detalles.Any())
             {
                 return Json(new { exito = false, mensaje = "El carrito está vacío." });
             }
+
+            // --- NUEVO CANDADO DE SEGURIDAD ---
+            // Verificamos si la mesa ya tiene un pedido activo
+            var sesionExistente = await _context.SesionesMesas
+                .FirstOrDefaultAsync(s => s.MesaId == request.Mesa && s.PedidoActivo == true);
+
+            if (sesionExistente != null)
+            {
+                return Json(new { exito = false, mensaje = "Esta mesa ya tiene una orden en proceso. Refresca la página." });
+            }
+            // ----------------------------------
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             
@@ -76,15 +145,10 @@ namespace MenuRestaurante.Controllers
                 // 1. Crear la cabecera del Pedido
                 var nuevoPedido = new Pedido
                 {
-                    // CS0029: Usamos MesaId (llave foránea) en lugar del objeto Mesa
                     MesaId = request.Mesa, 
-                    
+                    FechaPedido = DateTime.UtcNow,
                     MetodoPago = request.MetodoPago ?? "Efectivo",
                     Total = request.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario)
-                    
-                    // Nota: Las propiedades Fecha y Estado fueron comentadas (CS0117). 
-                    // Si tienes columnas para guardar la fecha y el estado en tu base de datos, 
-                    // agrégalas aquí con el nombre exacto de tu modelo (Ej. FechaPedido = DateTime.Now).
                 };
 
                 _context.Pedidos.Add(nuevoPedido);
@@ -99,24 +163,18 @@ namespace MenuRestaurante.Controllers
                         PlatilloId = item.PlatilloId,
                         Cantidad = item.Cantidad,
                         PrecioUnitario = item.PrecioUnitario,
-                        
-                        // Nota: Subtotal y Notas fueron omitidos (CS0117). 
-                        // El subtotal usualmente se calcula al vuelo o requiere que agregues 
-                        // la propiedad "public decimal Subtotal {get;set;}" a tu modelo DetallePedido.
-
                         NotasEspeciales = item.VarianteNombre
                     };
                     
-                    // CS1061: Corregido a DetallePedidos (plural estándar de EF Core)
                     _context.DetallePedidos.Add(detalle);
                 }
 
-                // 3. Actualizar la sesión (CS1061: Búsqueda por MesaId)
+                // 3. Actualizar la sesión de la mesa de forma segura
                 var sesionMesa = await _context.SesionesMesas.FirstOrDefaultAsync(s => s.MesaId == request.Mesa);
                 if (sesionMesa != null)
                 {
                     sesionMesa.PedidoActivo = true;
-                    _context.SesionesMesas.Update(sesionMesa);
+                    _context.Entry(sesionMesa).Property(s => s.PedidoActivo).IsModified = true;
                 }
 
                 await _context.SaveChangesAsync();
@@ -124,12 +182,36 @@ namespace MenuRestaurante.Controllers
 
                 return Json(new { exito = true, mensaje = "Orden guardada correctamente." });
             }
-            catch (Exception) // CS0168: Variable 'ex' removida para limpiar advertencias
+            catch (Exception)
             {
                 await transaction.RollbackAsync();
                 return Json(new { exito = false, mensaje = "Error interno al procesar la orden." });
             }
         }
+        [HttpPost]
+        public async Task<IActionResult> LlamarMesero([FromBody] AlertaRequest request)
+        {
+            // Buscamos el pedido más reciente de esa mesa que siga "Pendiente" o "En Proceso"
+            var pedidoMesa = await _context.Pedidos
+                .Where(p => p.MesaId == request.Mesa && p.EstadoPedido != "Completado" && p.EstadoPedido != "Pagado")
+                .OrderByDescending(p => p.FechaPedido)
+                .FirstOrDefaultAsync();
+
+            if (pedidoMesa != null)
+            {
+                // Actualizamos el tipo de alerta (Pago, Mesero, Queja)
+                pedidoMesa.TipoAlerta = request.TipoAlerta!;
+                
+                // Le decimos a EF Core que solo modifique esta columna
+                _context.Entry(pedidoMesa).Property(p => p.TipoAlerta).IsModified = true;
+                await _context.SaveChangesAsync();
+                
+                return Json(new { exito = true });
+            }
+
+            return Json(new { exito = false });
+        }
+
     }
 
     // --- CLASES AUXILIARES PARA RECIBIR EL JSON DEL CELULAR ---
@@ -148,5 +230,10 @@ namespace MenuRestaurante.Controllers
         public string? VarianteNombre { get; set; }
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
+    }       
+    public class AlertaRequest
+    {
+        public int Mesa { get; set; }
+        public string? TipoAlerta { get; set; }
     }
 }

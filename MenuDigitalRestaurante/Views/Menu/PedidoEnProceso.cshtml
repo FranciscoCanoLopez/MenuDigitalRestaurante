@@ -1,25 +1,189 @@
 @{
     ViewData["Title"] = "Pedido en Proceso";
-    int numeroMesa = ViewBag.NumeroMesa ?? 0;
+    Layout = null;
 }
 
-<div class="container text-center py-5" style="max-width: 500px;">
-    <div class="card shadow-lg border-0 p-4">
-        <div class="card-body">
-            <div class="display-1 text-warning mb-3">⏳</div>
-            <h3 class="fw-bold">¡Tu pedido está en proceso!</h3>
-            <p class="text-muted">
-                La <strong>Mesa @numeroMesa</strong> ya cuenta con una orden activa enviada a cocina.
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pedido Activo | Pescadería</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --celeste-principal: #3aafc9;
+            --celeste-suave: #eef9fb;
+            --celeste-oscuro: #1b5e70;
+            --fondo-app: #eef9fb;
+            --texto-principal: #2d3748;
+        }
+
+        body {
+            background-color: var(--fondo-app);
+            color: var(--texto-principal);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding-bottom: 40px;
+        }
+
+        /* Header Móvil Superior */
+        .header-movil {
+            background: #badbfd;
+            border-bottom: 1px solid #badbfd;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 12px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+
+        /* Tarjeta Elegante */
+        .card-platillo {
+            border: 1px solid #f0f4f8;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            text-align: center;
+        }
+
+        .categoria-titulo {
+            font-size: 1.5rem;
+            color: var(--celeste-oscuro);
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        /* Botones de Acción */
+        .btn-pedir {
+            background-color: var(--celeste-principal);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-pedir:active {
+            background-color: var(--celeste-oscuro);
+            transform: scale(0.98);
+        }
+
+        .btn-mesero {
+            background-color: #ffc107;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-mesero:active {
+            background-color: #e0a800;
+            transform: scale(0.98);
+        }
+
+        .btn-queja {
+            background-color: #dc3545;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-queja:active {
+            background-color: #c82333;
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Fijo Superior -->
+    <header class="header-movil d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="m-0 font-weight-bold" style="color: var(--celeste-oscuro);">🌊 PESCADERÍA EL DIAMANTE 💎</h5>
+        </div>
+        <span class="badge bg-light text-dark border px-2 py-1 fs-6">
+            Mesa <strong>#@ViewBag.NumeroMesa</strong>
+        </span>
+    </header>
+
+    <div class="container mt-4 px-3">
+        <!-- Tarjeta de Información -->
+        <div class="card-platillo mb-4">
+            <div class="mb-3">
+                <i class="bi bi-clock-history" style="font-size: 3.5rem; color: var(--celeste-principal);"></i>
+            </div>
+            <h3 class="categoria-titulo">¡Tu pedido está en proceso!</h3>
+            
+            <p class="fs-6" style="color: var(--texto-principal);">
+                La <strong>Mesa @ViewBag.NumeroMesa</strong> ya cuenta con una orden activa enviada a cocina.
             </p>
             
-            <div class="alert alert-info mt-4" role="alert">
-                <i class="bi bi-info-circle"></i> 
-                Si deseas pedir algo adicional o realizar tu pago, por favor solicita la atención de un mesero o dirígete a caja.
-            </div>
-
-            <p class="small text-muted mt-3 mb-0">
+            <hr class="my-3" style="border-color: #e2e8f0;">
+            
+            <p class="small text-muted mb-0" style="line-height: 1.5;">
+                Si deseas pedir algo adicional o realizar tu pago, por favor solicita la atención de un mesero o dirígete a caja.<br><br>
                 Una vez liquidada la cuenta en caja, la mesa quedará disponible nuevamente.
             </p>
         </div>
+
+        <!-- Botones de Solicitud -->
+        <h5 class="fw-bold text-center mb-3" style="color: var(--celeste-oscuro);">¿Necesitas asistencia?</h5>
+        
+        <div class="d-flex flex-column gap-3">
+            <!-- Botón Solicitar Pago -->
+            <button class="btn btn-pedir py-3 fs-5 d-flex justify-content-center align-items-center gap-2 shadow-sm" onclick="solicitarAtencion('Pago')">
+                <i class="bi bi-cash-coin fs-4"></i> Solicitar Pago
+            </button>
+
+            <!-- Botón Solicitar Mesero -->
+            <button class="btn btn-mesero py-3 fs-5 d-flex justify-content-center align-items-center gap-2 shadow-sm" onclick="solicitarAtencion('Mesero')">
+                <i class="bi bi-person-raised-hand fs-4"></i> Solicitar Mesero
+            </button>
+
+            <!-- Botón Queja -->
+            <button class="btn btn-queja py-3 fs-5 d-flex justify-content-center align-items-center gap-2 shadow-sm" onclick="solicitarAtencion('Queja')">
+                <i class="bi bi-exclamation-triangle fs-4"></i> Problema / Queja
+            </button>
+        </div>
     </div>
-</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function solicitarAtencion(tipoAlerta) {
+            let mensajeConfirmacion = "";
+            
+            if (tipoAlerta === 'Pago') mensajeConfirmacion = "¿Deseas solicitar la cuenta a tu mesa?";
+            if (tipoAlerta === 'Mesero') mensajeConfirmacion = "¿Deseas llamar a un mesero para pedir algo adicional?";
+            if (tipoAlerta === 'Queja') mensajeConfirmacion = "¿Deseas reportar un problema con tu orden urgente?";
+
+            if (confirm(mensajeConfirmacion)) {
+                // Enviar la alerta al servidor
+                fetch('/Menu/LlamarMesero', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        Mesa: parseInt('@ViewBag.NumeroMesa'),
+                        TipoAlerta: tipoAlerta
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert("¡Alerta enviada! Un miembro de nuestro equipo te atenderá enseguida.");
+                    } else {
+                        alert("No pudimos procesar la alerta. Intenta de nuevo.");
+                    }
+                })
+                .catch(err => console.error("Error:", err));
+            }
+        }
+    </script>
+</body>
+</html>

@@ -11,7 +11,7 @@ namespace MenuDigitalRestaurante.Models
         public string EstadoPedido { get; set; } = "Pendiente";
         public decimal Total { get; set; }
         public DateTime FechaPedido { get; set; } = DateTime.UtcNow;
-
+        public string TipoAlerta { get; set; } = "Ninguna";
         public virtual Mesa? Mesa { get; set; }
         public virtual ICollection<DetallePedido> Detalles { get; set; } = new List<DetallePedido>();
     }

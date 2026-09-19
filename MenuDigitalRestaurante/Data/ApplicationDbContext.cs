@@ -67,6 +67,7 @@ namespace MenuDigitalRestaurante.Data
                 entity.Property(e => e.EstadoPedido).HasColumnName("estadopedido");
                 entity.Property(e => e.Total).HasColumnName("total");
                 entity.Property(e => e.FechaPedido).HasColumnName("fechapedido");
+                entity.Property(e => e.TipoAlerta).HasColumnName("tipoalerta");
             });
 
             modelBuilder.Entity<DetallePedido>(entity => {

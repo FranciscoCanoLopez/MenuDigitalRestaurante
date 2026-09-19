@@ -1,99 +1,342 @@
-@model IEnumerable<MenuDigitalRestaurante.Models.Pedido>
-
 @{
     ViewData["Title"] = "Panel de Caja";
+    Layout = null; 
 }
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>🖥️ Panel de Control - Caja</h2>
-        <a href="/Cajero" class="btn btn-outline-primary btn-sm">🔄 Actualizar Pedidos</a>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Caja y Recepción | Pescadería</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --celeste-principal: #3aafc9;
+            --celeste-suave: #eef9fb;
+            --celeste-oscuro: #1b5e70;
+            --fondo-app: #f4f7f6;
+            --texto-principal: #2d3748;
+        }
+
+        body {
+            background-color: var(--fondo-app);
+            color: var(--texto-principal);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; 
+        }
+
+        .btn-celeste { background-color: var(--celeste-principal); color: #ffffff; border: none; }
+        .btn-celeste:hover { background-color: var(--celeste-oscuro); color: #ffffff; }
+
+        /* Estructura del POS */
+        .pos-layout { display: flex; height: 100vh; }
+        .pos-sidebar {
+            width: 250px; background: #ffffff; border-right: 1px solid #e2e8f0;
+            display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.03); z-index: 10;
+        }
+        .pos-content { flex: 1; overflow-y: auto; padding: 20px; background-color: var(--fondo-app); }
+
+        /* Botones Sidebar */
+        .nav-link-pos {
+            color: var(--texto-principal); padding: 15px 20px; font-size: 1.1rem;
+            font-weight: 500; border-radius: 0; border-left: 4px solid transparent; transition: all 0.2s; cursor: pointer;
+        }
+        .nav-link-pos:hover { background-color: var(--celeste-suave); }
+        .nav-link-pos.active { background-color: var(--celeste-suave); border-left: 4px solid var(--celeste-principal); color: var(--celeste-oscuro); font-weight: 700; }
+
+        /* Tarjetas de Mesas */
+        .mesa-card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.02); height: 100%; transition: transform 0.2s; display: flex; flex-direction: column; }
+        .mesa-header { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .mesa-body { padding: 15px; flex-grow: 1; font-size: 0.9rem; overflow-y: auto; max-height: 250px; }
+        .mesa-footer { padding: 15px; border-top: 1px solid #e2e8f0; background: #fafbfc; border-radius: 0 0 12px 12px; }
+
+        /* ANIMACIONES INTERMITENTES */
+        @@keyframes parpadeo-celeste { 0% { box-shadow: 0 0 0 0 rgba(58, 175, 201, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(58, 175, 201, 0); } 100% { box-shadow: 0 0 0 0 rgba(58, 175, 201, 0); } }
+        @@keyframes parpadeo-amarillo { 0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); } }
+        @@keyframes parpadeo-rojo { 0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 53, 极简主义风格，注重功能性和简洁性，强调形式追随功能的设计理念。
+        .alerta-queja { border: 2px solid #dc3545 !important; animation: parpadeo-rojo 1.5s infinite; }
+    </style>
+</head>
+<body>
+
+    <div class="pos-layout">
+        <!-- BARRA LATERAL -->
+        <div class="pos-sidebar">
+            <div class="p-4 text-center border-bottom">
+                <h4 class="fw-bold mb-0" style="color: var(--celeste-oscuro);">EL DIAMANTE</h4>
+                <small class="text-muted">Caja & Pedidos</small>
+            </div>
+            
+            <div class="nav flex-column nav-pills mt-2" role="tablist" aria-orientation="vertical">
+                <a class="nav-link-pos active" data-bs-toggle="pill" href="#tab-mesas" role="tab">
+                    <i class="bi bi-grid-fill me-2"></i> Mesas en Vivo
+                </a>
+                <a class="nav-link-pos" data-bs-toggle="pill" href="#tab-ordenar" role="tab">
+                    <i class="bi bi-pencil-square me-2"></i> Ordenar (POS)
+                </a>
+                <a class="nav-link-pos" data-bs-toggle="pill" href="#tab-domicilio" role="tab">
+                    <i class="bi bi-motorcycle me-2"></i> Domicilio
+                </a>
+            </div>
+
+            <div class="mt-auto p-3 border-top text-center">
+                <p class="small text-muted mb-1">Status: Conectado 🟢</p>
+            </div>
+        </div>
+
+        <!-- ÁREA PRINCIPAL -->
+        <div class="pos-content tab-content">
+            <!-- PANEL 1: MESAS Y PEDIDOS EN VIVO -->
+            <div class="tab-pane fade show active h-100" id="tab-mesas" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="fw-bold m-0" style="color: var(--celeste-oscuro);">Panel de Mesas</h3>
+                    <div>
+                        <span class="badge bg-danger">Queja</span>
+                        <span class="badge bg-warning text-dark">Mesero</span>
+                        <span class="badge" style="background-color: var(--celeste-principal);">Pago</span>
+                    </div>
+                </div>
+
+                <div class="row g-4" id="contenedorMesas">
+                    <div class="col-12 text-center text-muted py-5">
+                        <div class="spinner-border text-info" role="status"></div>
+                        <p class="mt-2">Sincronizando mesas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 2 y 3: (Simplificados por ahora) -->
+            <div class="tab-pane fade h-100" id="tab-ordenar" role="tabpanel">
+                <h3 class="fw-bold mb-4" style="color: var(--celeste-oscuro);">Tomar Orden (Caja)</h3>
+            </div>
+            <div class="tab-pane fade h-100" id="tab-domicilio" role="tabpanel">
+                <h3 class="fw-bold mb-4" style="color: var(--celeste-oscuro);">Pedidos a Domicilio</h3>
+            </div>
+        </div>
     </div>
 
-    @if (TempData["Mensaje"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Mensaje"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
+    <!-- MODAL DE COBRO AUTOMÁTICO / CAMBIO -->
+    <div class="modal fade" id="modalCobro" tabindex="-1" aria-labelledby="modalCobroLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalCobroLabel" style="color: var(--celeste-oscuro);">Procesar Pago - Mesa <span id="lblMesaCobro"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="cobroPedidoId">
+                    
+                    <div class="text-center mb-4">
+                        <p class="text-muted mb-1 fs-5">Total a Pagar</p>
+                        <h1 class="fw-bold text-dark display-4 mb-0" id="lblTotalCobro">$0.00</h1>
+                        <span class="badge fs-6 mt-2" id="badgeMetodoPago" style="background-color: var(--celeste-principal);">Efectivo</span>
+                    </div>
 
-    @if (!Model.Any())
-    {
-        <div class="text-center py-5">
-            <h4 class="text-muted">No hay pedidos pendientes en este momento. ✨</h4>
-        </div>
-    }
-    else
-    {
-        <div class="row">
-            @foreach (var pedido in Model)
-            {
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card shadow-sm border-0 h-100">
-                        <!-- Cabecera de la tarjeta con mesa y estado -->
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <h5 class="m-0 fw-bold">
-                                @(pedido.Mesa != null ? $"Mesa {pedido.Mesa.NumeroMesa}" : "Para Llevar / Domicilio")
-                            </h5>
-                            <span class="badge bg-warning text-dark">@pedido.EstadoPedido</span>
-                        </div>
-
-                        <div class="card-body">
-                            <p class="text-muted small mb-2">
-                                <strong>Folio:</strong> #@pedido.Id | 
-                                <strong>Hora:</strong> @pedido.FechaPedido.ToLocalTime().ToString("HH:mm")
-                            </p>
-                            
-                            <!-- Detalle de consumo -->
-                            <ul class="list-group list-group-flush mb-3">
-                                @foreach (var detalle in pedido.Detalles)
-                                {
-                                    <li class="list-group-content border-0 px-0 py-1">
-                                        <div class="d-flex justify-content-between">
-                                            <span><strong>@detalle.Cantidad x</strong> @(detalle.Platillo?.Nombre ?? "Producto")</span>
-                                            <span class="text-muted">$@((detalle.PrecioUnitario * detalle.Cantidad).ToString("0.00"))</span>
-                                        </div>
-                                        @if (!string.IsNullOrEmpty(detalle.NotasEspeciales))
-                                        {
-                                            <small class="text-danger d-block ms-3">⚠️ @detalle.NotasEspeciales</small>
-                                        }
-                                    </li>
-                                }
-                            </ul>
-
-                            <hr />
-
-                            <!-- Total y Método de Pago -->
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <small class="text-muted d-block">Método de Pago:</small>
-                                    <span class="badge bg-secondary">
-                                        @(pedido.MetodoPago == "Efectivo" ? "💵 Efectivo" : "💳 Tarjeta")
-                                    </span>
-                                </div>
-                                <div class="text-end">
-                                    <small class="text-muted d-block">Total a Cobrar:</small>
-                                    <h4 class="fw-bold text-success m-0">$@pedido.Total.ToString("0.00")</h4>
-                                </div>
+                    <!-- Sección para Efectivo -->
+                    <div id="seccionEfectivo" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold">Monto Recibido del Cliente</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-cash"></i></span>
+                                <input type="number" class="form-control border-start-0 fs-3 fw-bold text-dark" id="txtMontoRecibido" onkeyup="calcularCambio()">
                             </div>
                         </div>
 
-                        <!-- Acciones del Cajero -->
-                        <div class="card-footer bg-light border-0 d-flex gap-2">
-                            <a href="/Cajero/Ticket/@pedido.Id" target="_blank" class="btn btn-outline-secondary w-50">
-                                📄 Ticket
-                            </a>
-                            <form action="/Cajero/Cobrar" method="post" class="w-50">
-                                <input type="hidden" name="pedidoId" value="@pedido.Id" />
-                                <button type="submit" class="btn btn-success w-100 fw-bold">
-                                    ✅ Cobrar
-                                </button>
-                            </form>
+                        <div class="p-3 bg-light rounded text-center border">
+                            <p class="text-muted mb-1 fw-bold">Cambio a Devolver</p>
+                            <h2 class="fw-bold mb-0 text-success" id="lblCambio">$0.00</h2>
                         </div>
                     </div>
+
+                    <!-- Sección para Tarjeta -->
+                    <div id="seccionTarjeta" class="d-none text-center p-3 bg-light rounded border">
+                        <i class="bi bi-credit-card" style="font-size: 3rem; color: var(--celeste-principal);"></i>
+                        <h5 class="mt-2 text-dark fw-bold">Pago con Terminal</h5>
+                        <p class="text-muted small mb-0">La transacción se realizará directo en la terminal.<br>No se requiere calcular cambio.</p>
+                    </div>
+
                 </div>
-            }
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-celeste fs-5 px-4" onclick="confirmarPagoEImprimir()">
+                        <i class="bi bi-printer me-2"></i> Cobrar e Imprimir
+                    </button>
+                </div>
+            </div>
         </div>
-    }
-</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let totalCobroActual = 0;
+
+        // Cargar mesas
+        function cargarMesas() {
+            fetch('/Cajero/ObtenerEstadoMesas')
+                .then(response => response.json())
+                .then(datos => dibujarMesas(datos))
+                .catch(err => console.error("Error sincronizando:", err));
+        }
+
+        // Dibujar HTML
+        function dibujarMesas(mesas) {
+            const contenedor = document.getElementById('contenedorMesas');
+            contenedor.innerHTML = '';
+
+            mesas.forEach(m => {
+                let col = document.createElement('div');
+                col.className = 'col-12 col-md-6 col-xl-4';
+
+                if (!m.ocupada) {
+                    col.innerHTML = `
+                        <div class="mesa-card bg-light border-dashed">
+                            <div class="mesa-header text-muted">
+                                <h5 class="fw-bold m-0"><i class="bi bi-square me-2"></i> Mesa ${m.numeroMesa}</h5>
+                                <span class="badge bg-secondary">Disponible</span>
+                            </div>
+                            <div class="mesa-body d-flex justify-content-center align-items-center text-muted h-100">
+                                Sin orden activa
+                            </div>
+                        </div>`;
+                } else {
+                    let ped = m.pedido;
+                    let claseAlerta = "", headerStyle = "background-color: #f8fafc;", alertaBadge = "";
+
+                    if (ped.tipoAlerta === 'Pago') {
+                        claseAlerta = "alerta-pago"; headerStyle = "background-color: var(--celeste-suave);";
+                        alertaBadge = `<button class="btn btn-sm btn-outline-info" onclick="atenderAlerta(${ped.id})">💰 Quiere pagar</button>`;
+                    } else if (ped.tipoAlerta === 'Mesero') {
+                        claseAlerta = "alerta-mesero"; headerStyle = "background-color: #fff8e1;";
+                        alertaBadge = `<button class="btn btn-sm btn-outline-warning text-dark" onclick="atenderAlerta(${ped.id})">👋 Llama Mesero</button>`;
+                    } else if (ped.tipoAlerta === 'Queja') {
+                        claseAlerta = "alerta-queja"; headerStyle = "background-color: #f8d7da;";
+                        alertaBadge = `<button class="btn btn-sm btn-danger" onclick="atenderAlerta(${ped.id})">⚠️ URGENTE / QUEJA</button>`;
+                    }
+
+                    let detallesHTML = ped.detalles.map(d => `
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <div>
+                                <span class="fw-bold">${d.cantidad} x</span> ${d.platillo}
+                                ${d.variante ? `<br><small class="text-muted ms-4">➥ ${d.variante}</small>` : ''}
+                            </div>
+                            <span class="fw-bold">$${d.subtotal.toFixed(2)}</span>
+                        </div>
+                    `).join('');
+
+                    col.innerHTML = `
+                        <div class="mesa-card ${claseAlerta}">
+                            <div class="mesa-header" style="${headerStyle}">
+                                <h5 class="fw-bold m-0" style="color: var(--celeste-oscuro);">Mesa ${m.numeroMesa}</h5>
+                                <div class="text-end">
+                                    <small class="fw-bold text-muted d-block">${ped.folio}</small>
+                                    <small class="text-muted"><i class="bi bi-clock"></i> ${ped.hora}</small>
+                                </div>
+                            </div>
+                            <div class="mesa-body">
+                                ${alertaBadge ? `<div class="mb-3 text-center">${alertaBadge}</div>` : ''}
+                                ${detallesHTML}
+                            </div>
+                            <div class="mesa-footer">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted small">Pago: <strong>${ped.metodoPago}</strong></span>
+                                    <span class="fs-5 fw-bold" style="color: var(--celeste-oscuro);">Total: $${ped.total.toFixed(2)}</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-light w-50 text-secondary border" onclick="window.open('/Cajero/Ticket/${ped.id}', '_blank')"><i class="bi bi-printer"></i> Ticket</button>
+                                    
+                                    <!-- ESTE ES EL BOTÓN MODIFICADO QUE ABRE EL PANEL DE PAGO -->
+                                    <button class="btn w-50 btn-celeste" onclick="abrirModalCobro(${ped.id}, ${m.numeroMesa}, ${ped.total}, '${ped.metodoPago}')">
+                                        <i class="bi bi-check-circle"></i> Cobrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+                contenedor.appendChild(col);
+            });
+        }
+
+        // Apagar Alerta
+        function atenderAlerta(pedidoId) {
+            fetch('/Cajero/AtenderAlerta?pedidoId=' + pedidoId, { method: 'POST' }).then(() => cargarMesas());
+        }
+
+        // LÓGICA DEL PANEL DE COBRO
+        function abrirModalCobro(pedidoId, numMesa, total, metodoPago) {
+            document.getElementById('cobroPedidoId').value = pedidoId;
+            document.getElementById('lblMesaCobro').innerText = numMesa;
+            document.getElementById('lblTotalCobro').innerText = '$' + total.toFixed(2);
+            document.getElementById('badgeMetodoPago').innerText = metodoPago;
+            
+            totalCobroActual = parseFloat(total);
+            document.getElementById('txtMontoRecibido').value = '';
+            document.getElementById('lblCambio').innerText = '$0.00';
+
+            // Mostrar campos según el método de pago
+            if (metodoPago.toLowerCase() === 'efectivo') {
+                document.getElementById('seccionEfectivo').classList.remove('d-none');
+                document.getElementById('seccionTarjeta').classList.add('d-none');
+                // Auto-enfocar el campo de texto después de que abra el modal
+                setTimeout(() => document.getElementById('txtMontoRecibido').focus(), 500);
+            } else {
+                document.getElementById('seccionEfectivo').classList.add('d-none');
+                document.getElementById('seccionTarjeta').classList.remove('d-none');
+            }
+
+            let modalCobro = new bootstrap.Modal(document.getElementById('modalCobro'));
+            modalCobro.show();
+        }
+
+        function calcularCambio() {
+            let recibido = parseFloat(document.getElementById('txtMontoRecibido').value) || 0;
+            let cambio = recibido - totalCobroActual;
+            
+            if (cambio < 0) cambio = 0; // No mostrar negativos
+
+            document.getElementById('lblCambio').innerText = '$' + cambio.toFixed(2);
+        }
+
+        function confirmarPagoEImprimir() {
+            let pedidoId = document.getElementById('cobroPedidoId').value;
+            let metodoPago = document.getElementById('badgeMetodoPago').innerText.toLowerCase();
+
+            // Validar efectivo
+            if (metodoPago === 'efectivo') {
+                let recibido = parseFloat(document.getElementById('txtMontoRecibido').value) || 0;
+                if (recibido < totalCobroActual) {
+                    alert("El monto recibido no es suficiente para cubrir la cuenta.");
+                    return;
+                }
+            }
+
+            // Procesar el cobro en el backend
+            fetch('/Cajero/CobrarPedido?pedidoId=' + pedidoId, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exito) {
+                        // Cerrar modal
+                        let modalEl = document.getElementById('modalCobro');
+                        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        modalInstance.hide();
+                        
+                        // Refrescar mesas
+                        cargarMesas();
+
+                        // Enviar orden de impresión (Abre la vista Ticket en otra pestaña)
+                        window.open('/Cajero/Ticket/' + pedidoId, '_blank');
+                    } else {
+                        alert("Hubo un error al intentar cobrar el pedido.");
+                    }
+                });
+        }
+
+        // Bucle de actualización (Cada 5 segundos)
+        cargarMesas();
+        setInterval(cargarMesas, 5000); 
+    </script>
+</body>
+</html>
